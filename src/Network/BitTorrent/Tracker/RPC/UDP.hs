@@ -336,6 +336,7 @@ allocTransaction :: Manager -> SockAddr -> PendingResponse -> IO TransactionId
 allocTransaction Manager {..} addr ares =
   modifyMVar pendingResps $ \ m -> do
     rndId <- genTransactionId
+    -- 此处得到一个transaction的ID
     let tid = firstUnused addr rndId m
     return (register addr tid ares m, tid)
 
@@ -390,7 +391,7 @@ connect m addr conn = do
     Connected cid -> return cid
     Failed    msg -> throwIO $ QueryFailed msg
     _ -> throwIO $ UnexpectedResponse "connected" (responseName resp)
-
+-- 向远端发起链接请求，并得到链接的ID
 newConnection :: Manager -> SockAddr -> IO Connection
 newConnection m addr = do
   connId  <- connect m addr initialConnection
@@ -413,7 +414,8 @@ withCache mgr addr action = do
   conn  <- action (M.lookup addr cache)
   writeIORef (connectionCache mgr) (M.insert addr conn cache)
   return conn
-
+-- 拿到相应的链接
+-- 此处要么新建一个，要么刷新
 getConnection :: Manager -> SockAddr -> IO Connection
 getConnection mgr addr = withCache mgr addr $
   maybe (newConnection mgr addr) (refreshConnection mgr addr)
@@ -430,12 +432,16 @@ retransmission Options {..} action = go optMinTimeout
       |         otherwise          = do
         r <- timeout (curTimeout * sec) action
         maybe (go (optMultiplier * curTimeout)) return r
-
+-- 向Tracker发起请求
 queryTracker :: Manager -> URI -> Request -> IO Response
 queryTracker mgr uri req = do
+  -- 得到Tracker的地址
   addr <- getTrackerAddr mgr uri
+
   retransmission (options mgr) $ do
     conn <- getConnection  mgr addr
+    -- 得到链接后，直接开始进行发送
+    -- 此处的链接只是IP:Port:Query形式的东西，并非UDP连接
     transaction mgr addr conn req
 
 -- | This function can throw 'RpcException'.
