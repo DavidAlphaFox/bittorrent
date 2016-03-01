@@ -36,7 +36,8 @@ import System.IO.MMap
 
 import Data.Torrent
 
-
+-- 文件MAP表，位置和大小
+-- 分片下载   
 data FileEntry = FileEntry
   { filePosition :: {-# UNPACK #-} !FileOffset
   , fileBytes    :: {-# UNPACK #-} !BS.ByteString
@@ -46,7 +47,7 @@ type FileMap = Vector FileEntry
 
 instance Default Mode where
   def = ReadWriteEx
-
+-- 使用MMAP来提高性能
 mmapFiles :: Mode -> FileLayout FileSize -> IO FileMap
 mmapFiles mode layout = V.fromList <$> L.mapM mkEntry (accumPositions layout)
   where
