@@ -151,7 +151,7 @@ data Manager = Manager
   , pendingResps    :: !(MVar  PendingQueries)
   , listenerThread  :: !(MVar ThreadId)
   }
-
+-- 初始化UDP的Tracker Manager
 initManager :: Options -> IO Manager
 initManager opts = Manager opts
   <$> socket AF_INET Datagram defaultProtocol
@@ -176,7 +176,7 @@ resetState Manager {..} = do
     return ()
   where
     err = error "UDP tracker manager closed"
-
+-- 开启UDP端口进行监听，如果出现问题则进行resetState
 -- | This function will throw 'IOException' on invalid 'Options'.
 newManager :: Options -> IO Manager
 newManager opts = do
@@ -354,7 +354,8 @@ cancelTransaction :: Manager -> SockAddr -> TransactionId -> IO ()
 cancelTransaction Manager {..} addr tid =
   modifyMVarMasked_ pendingResps $ \m ->
     return $ unregister addr tid m
-
+-- 此处死循环，不过ForkIO也是轻量级的线程
+-- 也就是一个数据块
 -- | Handle responses from trackers.
 listen :: Manager -> IO ()
 listen mgr @ Manager {..} = do

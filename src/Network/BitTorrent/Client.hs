@@ -101,7 +101,7 @@ connHandler tmap ih = do
   case HM.lookup ih m of
     Nothing            -> error "torrent not found"
     Just (Handle {..}) -> return handleExchange
-
+-- 初始化新的Client
 initClient :: Options -> LogFun -> ResIO Client
 initClient opts @ Options {..} logFun = do
   pid  <- liftIO genPeerId
@@ -132,7 +132,7 @@ initClient opts @ Options {..} logFun = do
     , clientLogger       = logFun
     , clientEvents       = eventStream
     }
-
+-- 创建一个新的客户端
 newClient :: Options -> LogFun -> IO Client
 newClient opts logFun = do
   s <- createInternalState
@@ -141,7 +141,7 @@ newClient opts logFun = do
 
 closeClient :: Client -> IO ()
 closeClient Client {..} = closeInternalState clientResources
-
+-- 带上保护，出现问题会关闭客户端
 withClient :: Options -> LogFun -> (Client -> IO a) -> IO a
 withClient opts lf action = bracket (newClient opts lf) closeClient action
 
@@ -155,6 +155,7 @@ withClient opts lf action = bracket (newClient opts lf) closeClient action
 --
 --   For testing purposes only.
 --
+-- 简单客户端
 simpleClient :: BitTorrent () -> IO ()
 simpleClient m = do
   runStderrLoggingT $ LoggingT $ \ logger -> do
