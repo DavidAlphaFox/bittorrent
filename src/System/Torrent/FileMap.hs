@@ -89,12 +89,15 @@ size m
   |           V.null m               = 0
   | FileEntry {..} <- V.unsafeLast m
   = filePosition + fromIntegral (BS.length fileBytes)
-
+-- 从FileMap中找出相应的文件偏移
 bsearch :: FileOffset -> FileMap -> Maybe Int
 bsearch x m
   | V.null m  = Nothing
   | otherwise = branch (V.length m `div` 2)
   where
+    -- 二分搜索
+    -- 此处使用的是ViewPatterns 语法
+    -- c 绑定的是 整数，后面的是ViewPatterns
     branch c @ ((m !) -> FileEntry {..})
       | x <  filePosition            = bsearch x (V.take c m)
       | x >= filePosition + fileSize = do
