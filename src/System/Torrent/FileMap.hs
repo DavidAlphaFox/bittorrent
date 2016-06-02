@@ -38,22 +38,28 @@ import Data.Torrent
 
 -- 文件MAP表，位置和大小
 -- 分片下载   
+-- UNPACK会让编译器生成非打包的数据对齐
 data FileEntry = FileEntry
   { filePosition :: {-# UNPACK #-} !FileOffset
   , fileBytes    :: {-# UNPACK #-} !BS.ByteString
   } deriving (Show, Eq)
-
+-- FileMap是FileEntry的数组
 type FileMap = Vector FileEntry
-
+-- Mode的默认值
 instance Default Mode where
   def = ReadWriteEx
 -- 使用MMAP来提高性能
 mmapFiles :: Mode -> FileLayout FileSize -> IO FileMap
 mmapFiles mode layout = V.fromList <$> L.mapM mkEntry (accumPositions layout)
   where
+    -- 路径，位置和期望的大小
     mkEntry (path, (pos, expectedSize)) = do
+      -- 得到希望的的文件大小
       let esize = fromIntegral expectedSize -- FIXME does this safe?
+      -- foreign pointer to beginning of raw region, 
+      -- offset to your data and size of your data 
       (fptr, moff, msize) <- mmapFileForeignPtr path mode $ Just (0, esize)
+      -- 如果文件大小不同，就报告失败
       if msize /= esize
         then error "mmapFiles" -- TODO unmap mapped files on exception
         else return $ FileEntry pos (PS fptr moff msize)
@@ -61,6 +67,7 @@ mmapFiles mode layout = V.fromList <$> L.mapM mkEntry (accumPositions layout)
 unmapFiles :: FileMap -> IO ()
 unmapFiles = V.mapM_ unmapEntry
   where
+    -- 进行内存释放，关闭MMAP句柄
     unmapEntry (FileEntry _ (PS fptr _ _)) = finalizeForeignPtr fptr
 
 fromLazyByteString :: BL.ByteString -> FileMap
