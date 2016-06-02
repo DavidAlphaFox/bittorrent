@@ -99,11 +99,14 @@ bsearch x m
     -- 此处使用的是ViewPatterns 语法
     -- c 绑定的是 整数，后面的是ViewPatterns
     branch c @ ((m !) -> FileEntry {..})
+      -- 请求的偏移，小于文件的位置
       | x <  filePosition            = bsearch x (V.take c m)
-      | x >= filePosition + fileSize = do
-        ix <- bsearch x (V.drop (succ c) m)
-        return $ succ c + ix
-      |          otherwise           = Just c
+      -- 请求的偏移，大于文件的位置
+      | x > filePosition + fileSize = do
+          Just ix <- bsearch x (V.drop (succ c) m)
+          Just (succ c + ix)
+      -- 余下的情况，表示请求的偏移，正好在filePosition + fileSize范围内
+      | otherwise           = Just c
       where
         fileSize = fromIntegral (BS.length fileBytes)
 
