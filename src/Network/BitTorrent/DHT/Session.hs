@@ -253,6 +253,7 @@ data Node ip = Node
 
 -- | DHT keep track current session and proper resource allocation for
 -- safe multithreading.
+--  封装DHT
 newtype DHT ip a = DHT { unDHT :: ReaderT (Node ip) IO a }
   deriving ( Functor, Applicative, Monad, MonadIO
            , MonadBase IO, MonadReader (Node ip), MonadThrow
@@ -479,7 +480,9 @@ deleteTopic ih p = do
 queryNode :: forall a b ip. Address ip => KRPC (Query a) (Response b)
           => NodeAddr ip -> a -> DHT ip (NodeId, b)
 queryNode addr q = do
+  -- 获取本节点的ID
   nid <- asks thisNodeId
+  --  查询对方节点
   Response remoteId r <- query (toSockAddr addr) (Query nid q)
   insertNode (NodeInfo remoteId addr)
   return (remoteId, r)
